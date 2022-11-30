@@ -17,11 +17,11 @@ const int MAX_WAIT = 20;
 struct timespec time_s;
 
 /* SEMAPHORES */
-//#define EMPTY   0
-//#define FULL    1
-//#define MUTEX   2 
+#define EMPTY   0
+#define FULL    1
+#define MUTEX   2 
 
-enum Semaphore{EMPTY, FULL, MUTEX};
+//enum Semaphore{EMPTY, FULL, MUTEX};
 
 const int semaphores_no =3;
 
@@ -52,11 +52,6 @@ int main (int argc, char **argv) {
   int queue_size = check_arg(argv[1]);
   cout<<"Size of queue:"<<queue_size<<endl;
   circQ.createQueue(queue_size);
-  for(int i=0; i<queue_size; i++){
-    cout<< circQ.get_element(i)<<endl;
-  }
-  cout<<circQ.get_start();
-  cout<<circQ.get_end();
 
   // number of jobs per producers
   int jobs_per_producer = check_arg(argv[2]);
@@ -76,11 +71,11 @@ int main (int argc, char **argv) {
     prod_id[n]=n+1;
     if((pthread_create(&producerid[n], NULL, producer, (void*)&prod_id[n])==0)){
       // successful creation of thread
-      cout<<"Successfully created producer thread"<<endl;
+      //cout<<"Successfully created producer thread"<<endl;
     }
     else{
       // unsuccessful creation of thread
-      perror("Producer thread creation unsuccessful");
+      perror("Producer thread creation unsuccessful\n");
     }
   }
   // create consumer threads
@@ -92,11 +87,11 @@ int main (int argc, char **argv) {
     con_id[n]=n+1;
     if((pthread_create(&consumerid[n], NULL, consumer, (void*)&con_id[n])==0)){
       // successful creation of thread
-     cout<<"Successfully created consumer thread"<<endl;
+     //cout<<"Successfully created consumer thread"<<endl;
     }
     else{
       // unsuccessful creation of thread
-      perror("Consumer thread creation unsuccessful");
+      perror("Consumer thread creation unsuccessful\n");
     }
   }
 
@@ -107,7 +102,7 @@ int main (int argc, char **argv) {
     }
     else{
       // unsuccessful  join
-      perror("Producer thread join unsuccessful");
+      perror("Producer thread join unsuccessful\n");
     }
   }
 
@@ -117,7 +112,7 @@ int main (int argc, char **argv) {
     }
     else{
       // unsuccessful  join
-      perror("Consumer thread join unsuccessful");
+      perror("Consumer thread join unsuccessful\n");
     }
   }
 
@@ -140,21 +135,25 @@ int main (int argc, char **argv) {
 
 void *producer (void *pnumber) 
 {
-  cout<<"In producer"<<endl;
-  time_s.tv_sec=MAX_WAIT;
-  int wait;
+  int wait_return;
   int job_n=0;
   while(job_n<n_of_jobs){
+    if(clock_gettime(CLOCK_REALTIME, &time_s)==-1){
+      cerr<<"Internal clock error"<<endl;
+    }
+    time_s.tv_sec=MAX_WAIT;
     // Produce a job with duration between 1-10 seconds
     int job_duration = rand()%10 +1;
-    cout<<"Job duratiojn:"<<job_duration<<endl;
     // wait if queue not empty
     // wait maximum of 20s
-    while((wait=sem_timed_wait(semID, EMPTY, &time_s)==-1)&& errno == EINTR)
+    //wait_return=sem_timed_wait(semID, EMPTY, &time_s);
+    cout<<"PRODUCER WAIT:"<<sem_timed_wait(semID, EMPTY, &time_s)<<endl;
+    while(((wait_return=sem_timed_wait(semID, EMPTY, &time_s))==-1)&& (errno == EINTR))
       continue;
-    if((wait==-1)) {
+    cout<<"PRODUCER WAIT RETURN:"<<wait_return<<endl;
+    if((wait_return==-1)) {
       if (errno == EAGAIN){
-        printf("Producer(%d): A slot has not become available after 20s. Producer quitting!", *((int*)pnumber));
+        printf("Producer(%d): A slot has not become available after 20s. Producer quitting!\n", *((int*)pnumber));
         pthread_exit((void*) 0);
       }
       else{
@@ -190,23 +189,32 @@ void *producer (void *pnumber)
   //sleep (5);
 
   //cout << "\nThat was a good sleep - thank you \n" << endl;
-  printf("Producer(%d): No more jobs to generate.", *((int*)pnumber));
+  printf("Producer(%d): No more jobs to generate.\n", *((int*)pnumber));
  pthread_exit((void*) 0);
 }
 
 void *consumer (void *cnumber) 
 {
   time_s.tv_sec=MAX_WAIT;
-  int n=0;
-  while(n<n_of_jobs){
+  int wait_return;
+  while(1){
+
+    if(clock_gettime(CLOCK_REALTIME, &time_s)==-1){
+      cerr<<"Internal clock error"<<endl;
+    }
 
     // wait if queue is full
     // wait maximum of 20s
-    if(sem_timed_wait(semID, FULL, &time_s)==-1){
+    wait_return = sem_timed_wait(semID, FULL, &time_s);
+    while(wait_return==-1 && errno == EINTR)
+      continue;
+    cout<<"WAIT RETURN:"<<wait_return<<endl;
+    if(wait_return==-1){
       if (errno == EAGAIN){
-        printf("Consumer(%d): No more jobs left.", *((int*)cnumber));
-        pthread_exit((void*) 0);
+        printf("Consumer(%d): No more jobs left.\n", *((int*)cnumber));
       }
+      printf("Consumer(%d): No more jobs left.\n", *((int*)cnumber));
+      pthread_exit((void*) 0);
     }
     else{
 
@@ -215,15 +223,15 @@ void *consumer (void *cnumber)
       // consume item
       int job_id = circQ.get_start();
       int job_consumed = circQ.deleteElement();
-      printf("Consumer (%d): Job id %d executing sleep duration %d\n", *((int*)cnumber), job_id, job_consumed);
+      printf("Consumer(%d): Job id %d executing sleep duration %d\n", *((int*)cnumber), job_id, job_consumed);
       sem_signal(semID, MUTEX);
 
       // sleep for time it takes to process the job
       sleep(job_consumed);
-
+      printf("Consumer(%d): Job id %d completed\n", *((int*)cnumber), job_id);
       sem_signal(semID, EMPTY);
-      n++;
-  }
+      
+    }
   }
   
 

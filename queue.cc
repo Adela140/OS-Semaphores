@@ -21,13 +21,13 @@ Queue::~Queue(){
 }
 
 void Queue::addElement(int num){
-    cout<<"In add element; size="<<size<<" start ="<<start<<" end="<<end<<endl;
+    //cout<<"In add element; size="<<size<<" start ="<<start<<" end="<<end<<endl;
     // check if the queue is full 
     // this can happen if start is at index 0 and end is at i ndex size-1 
     // OR if the queue has looped around and end is one index before start
     if((start==0 && end ==size-1)||((end==(start-1)%(size-1)))){
-        printf("\nCircular queue is full");
-        cout<<"QUEUE FULL: size="<<size<<" start ="<<start<<" end="<<end<<endl;
+        printf("\nCircular queue is full\n");
+        //cout<<"QUEUE FULL: size="<<size<<" start ="<<start<<" end="<<end<<endl;
         return;
     }
 
@@ -48,7 +48,7 @@ int Queue::deleteElement(){
     
     // check if queue is empty
     if(start==-1){
-        printf("\n Circular queue is empty");
+        printf("\n Circular queue is empty\n");
         return -1;
     }
 
