@@ -8,7 +8,7 @@
  * sem_close - Destroy the semaphore array
  ******************************************************************/
 
-# include "helper.h"
+#include "helper.h"
 #include <time.h>
 #include <stdio.h>
 
@@ -67,9 +67,10 @@ int sem_close (int id)
   return 0;
 }
 
-int sem_timed_wait(int id, short unsigned int num, struct timespec *max_time){
+int sem_timed_wait(int id, short unsigned int num,struct timespec *timeout){
   struct sembuf op[] = {
     {num, -1, SEM_UNDO}
   };
-  return (semtimedop (id, op, 1, max_time));
+
+  return semtimedop(id,op,1,timeout);
 }

@@ -21,14 +21,14 @@
 using namespace std;
 
 # define SEM_KEY 0x44 // Change this number as needed
-#if !(defined(__FreeBSD__) || defined(__APPLE__)) 
+//#if !(defined(__FreeBSD__) || defined(__APPLE__)) 
 /* union semun is defined by including <sys/sem.h> */
 union semun {
     int val;               /* used for SETVAL only */
     struct semid_ds *buf;  /* used for IPC_STAT and IPC_SET */
     ushort *array;         /* used for GETALL and SETALL */
 };
-#endif
+
 
 int check_arg (char *);
 int sem_create (key_t, int);
@@ -36,5 +36,5 @@ int sem_init (int, int, int);
 void sem_wait (int, short unsigned int);
 void sem_signal (int, short unsigned int);
 int sem_close (int);
-int sem_timed_wait(int, short unsigned int, struct timespec*);
+int sem_timed_wait(int, short unsigned int, struct timespec* time_s);
 

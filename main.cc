@@ -14,7 +14,7 @@ using namespace std;
 Queue circQ;
 int n_of_jobs;
 const int MAX_WAIT = 20;
-struct timespec time_s;
+//struct timespec time_s;
 
 /* SEMAPHORES */
 #define EMPTY   0
@@ -32,8 +32,6 @@ void *producer (void *id);
 void *consumer (void *id);
 
 
-
-
 int main (int argc, char **argv) {
   
 
@@ -45,13 +43,16 @@ int main (int argc, char **argv) {
     }
 
   // seed for rand determined with internal clock
-  //srand(time(NULL));
+  srand(time(NULL));
 
   // create circular queue (buffer)
   // size of the queue
   int queue_size = check_arg(argv[1]);
   cout<<"Size of queue:"<<queue_size<<endl;
   circQ.createQueue(queue_size);
+
+  // Create semaphores                                                                                                                 
+  //int semID = sem_create(SEM_KEY, semaphores_no); 
 
   // number of jobs per producers
   int jobs_per_producer = check_arg(argv[2]);
@@ -61,7 +62,7 @@ int main (int argc, char **argv) {
   sem_init(semID, MUTEX, 1);
   sem_init(semID, EMPTY, queue_size);
   sem_init(semID, FULL, 0);
-
+  
   // create producer threads
   // number of producers
   int num_producers = check_arg(argv[3]);
@@ -135,11 +136,12 @@ int main (int argc, char **argv) {
 
 void *producer (void *pnumber) 
 {
+  struct timespec time_s;
   int wait_return;
   int job_n=0;
   while(job_n<n_of_jobs){
     if(clock_gettime(CLOCK_REALTIME, &time_s)==-1){
-      cerr<<"Internal clock error"<<endl;
+      cout<<"Internal clock error"<<endl;
     }
     time_s.tv_sec=MAX_WAIT;
     // Produce a job with duration between 1-10 seconds
@@ -147,8 +149,9 @@ void *producer (void *pnumber)
     // wait if queue not empty
     // wait maximum of 20s
     //wait_return=sem_timed_wait(semID, EMPTY, &time_s);
-    cout<<"PRODUCER WAIT:"<<sem_timed_wait(semID, EMPTY, &time_s)<<endl;
-    while(((wait_return=sem_timed_wait(semID, EMPTY, &time_s))==-1)&& (errno == EINTR))
+    //cout<<"PRODUCER WAIT:"<<sem_timed_wait(semID, EMPTY, &time_s)<<endl;
+
+     while((wait_return=sem_timed_wait(semID, EMPTY, &time_s))==-1 && errno == EINTR)
       continue;
     cout<<"PRODUCER WAIT RETURN:"<<wait_return<<endl;
     if((wait_return==-1)) {
@@ -162,6 +165,7 @@ void *producer (void *pnumber)
       }
     }
     else{
+      // sem_wait(semID, EMPTY);
       sem_wait(semID, MUTEX);
 
       /****** CRITICAL SECTION ******/
@@ -175,7 +179,7 @@ void *producer (void *pnumber)
       sem_signal(semID, MUTEX);
       sem_signal(semID, FULL);
       job_n++;
-    }
+      }
     // wait 1-5 seconds before adding another job
       sleep(rand()%5 +1);
       
@@ -190,23 +194,24 @@ void *producer (void *pnumber)
 
   //cout << "\nThat was a good sleep - thank you \n" << endl;
   printf("Producer(%d): No more jobs to generate.\n", *((int*)pnumber));
- pthread_exit((void*) 0);
+  pthread_exit((void*) 0);
 }
 
 void *consumer (void *cnumber) 
 {
-  time_s.tv_sec=MAX_WAIT;
+  struct timespec time_s;
+   time_s.tv_sec=MAX_WAIT;
   int wait_return;
   while(1){
 
     if(clock_gettime(CLOCK_REALTIME, &time_s)==-1){
       cerr<<"Internal clock error"<<endl;
     }
-
+    time_s.tv_sec=MAX_WAIT; 
     // wait if queue is full
     // wait maximum of 20s
-    wait_return = sem_timed_wait(semID, FULL, &time_s);
-    while(wait_return==-1 && errno == EINTR)
+    // wait_return = sem_timed_wait(semID, FULL, &time_s);
+    while((wait_return = sem_timed_wait(semID, FULL, &time_s))==-1 && errno == EINTR)
       continue;
     cout<<"WAIT RETURN:"<<wait_return<<endl;
     if(wait_return==-1){
