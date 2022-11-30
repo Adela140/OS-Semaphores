@@ -9,6 +9,8 @@
  ******************************************************************/
 
 # include "helper.h"
+#include <time.h>
+#include <stdio.h>
 
 int check_arg (char *buffer)
 {
@@ -63,4 +65,11 @@ int sem_close (int id)
   if (semctl (id, 0, IPC_RMID, 0) < 0)
     return -1;
   return 0;
+}
+
+int sem_timed_wait(int id, short unsigned int num, struct timespec *max_time){
+  struct sembuf op[] = {
+    {num, -1, SEM_UNDO}
+  };
+  return (semtimedop (id, op, 1, max_time));
 }

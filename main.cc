@@ -7,11 +7,14 @@ using namespace std;
 #include "helper.h"
 #include "queue.h"
 #include "semaphore.h"
+#include <time.h>
+#include <stdio.h>
 
 
 Queue circQ;
 int n_of_jobs;
 const int MAX_WAIT = 20;
+struct timespec time_s;
 
 /* SEMAPHORES */
 //#define EMPTY   0
@@ -28,7 +31,13 @@ int semID = sem_create(SEM_KEY, semaphores_no);
 void *producer (void *id);
 void *consumer (void *id);
 
+
+
+
 int main (int argc, char **argv) {
+  
+
+
   // check if right number of arguments provided
     if(argc != 5){
     cerr << "Number of arguments must be four!" << endl;
@@ -36,7 +45,7 @@ int main (int argc, char **argv) {
     }
 
   // seed for rand determined with internal clock
-  srand(time(NULL));
+  //srand(time(NULL));
 
   // create circular queue (buffer)
   // size of the queue
@@ -67,7 +76,7 @@ int main (int argc, char **argv) {
     prod_id[n]=n+1;
     if((pthread_create(&producerid[n], NULL, producer, (void*)&prod_id[n])==0)){
       // successful creation of thread
-      //cout<<"Successfully created producer thread"<<endl;
+      cout<<"Successfully created producer thread"<<endl;
     }
     else{
       // unsuccessful creation of thread
@@ -83,7 +92,7 @@ int main (int argc, char **argv) {
     con_id[n]=n+1;
     if((pthread_create(&consumerid[n], NULL, consumer, (void*)&con_id[n])==0)){
       // successful creation of thread
-     // cout<<"Successfully created consumer thread"<<endl;
+     cout<<"Successfully created consumer thread"<<endl;
     }
     else{
       // unsuccessful creation of thread
@@ -127,37 +136,50 @@ int main (int argc, char **argv) {
   cout << "Doing some work after the join" << endl;
 */
   return 0;
-
-
-  sem_timedwait()
 }
 
 void *producer (void *pnumber) 
 {
-  //cout<<"prod number: "<<pnumber<<endl;
-  //int prod_n = *((int*)pnumber);
-  //cout<<"another prod num:"<<prod_n<<endl;
-  //cout<<"n of jobs:"<<n_of_jobs<<endl;
+  cout<<"In producer"<<endl;
+  time_s.tv_sec=MAX_WAIT;
+  int wait;
   int job_n=0;
   while(job_n<n_of_jobs){
     // Produce a job with duration between 1-10 seconds
     int job_duration = rand()%10 +1;
+    cout<<"Job duratiojn:"<<job_duration<<endl;
     // wait if queue not empty
-    sem_wait(semID, EMPTY); 
-    /****** CRITICAL SECTION ******/
-    sem_wait(semID, MUTEX);
-    // Add the job to the circular queue
-    //cout<<"End prod num:"<<prod_n<<endl;
-    //cout<<"End:"<<circQ.get_end()<<endl;
-    //cout<<"Start:"<<circQ.get_start()<<endl;
-    circQ.addElement(job_duration);
-    printf("Producer(%d): Job id %d duration %d\n", *((int*)pnumber), circQ.get_end(), circQ.get_element(circQ.get_end()));
-    sem_signal(semID, MUTEX);
-    sem_signal(semID, FULL);
+    // wait maximum of 20s
+    while((wait=sem_timed_wait(semID, EMPTY, &time_s)==-1)&& errno == EINTR)
+      continue;
+    if((wait==-1)) {
+      if (errno == EAGAIN){
+        printf("Producer(%d): A slot has not become available after 20s. Producer quitting!", *((int*)pnumber));
+        pthread_exit((void*) 0);
+      }
+      else{
+        cout<<"ERROR"<<endl;
+        pthread_exit((void*) 0);
+      }
+    }
+    else{
+      sem_wait(semID, MUTEX);
 
+      /****** CRITICAL SECTION ******/
+    
+      // Add the job to the circular queue
+      //cout<<"End prod num:"<<prod_n<<endl;
+      //cout<<"End:"<<circQ.get_end()<<endl;
+      //cout<<"Start:"<<circQ.get_start()<<endl;
+      circQ.addElement(job_duration);
+      printf("Producer(%d): Job id %d duration %d\n", *((int*)pnumber), circQ.get_end(), circQ.get_element(circQ.get_end()));
+      sem_signal(semID, MUTEX);
+      sem_signal(semID, FULL);
+      job_n++;
+    }
     // wait 1-5 seconds before adding another job
-    sleep(rand()%5 +1);
-    job_n++;
+      sleep(rand()%5 +1);
+      
   }
   
 
@@ -168,29 +190,40 @@ void *producer (void *pnumber)
   //sleep (5);
 
   //cout << "\nThat was a good sleep - thank you \n" << endl;
-
+  printf("Producer(%d): No more jobs to generate.", *((int*)pnumber));
  pthread_exit((void*) 0);
 }
 
 void *consumer (void *cnumber) 
 {
+  time_s.tv_sec=MAX_WAIT;
   int n=0;
   while(n<n_of_jobs){
+
     // wait if queue is full
-    sem_wait(semID, FULL);
-    sem_wait(semID, MUTEX);
+    // wait maximum of 20s
+    if(sem_timed_wait(semID, FULL, &time_s)==-1){
+      if (errno == EAGAIN){
+        printf("Consumer(%d): No more jobs left.", *((int*)cnumber));
+        pthread_exit((void*) 0);
+      }
+    }
+    else{
 
-    // consume item
-    int job_id = circQ.get_start();
-    int job_consumed = circQ.deleteElement();
-    printf("Consumer (%d): Job id %d executing sleep duration %d\n", *((int*)cnumber), job_id, job_consumed);
-    sem_signal(semID, MUTEX);
+      sem_wait(semID, MUTEX);
 
-    // sleep for time it takes to process the job
-    sleep(job_consumed);
+      // consume item
+      int job_id = circQ.get_start();
+      int job_consumed = circQ.deleteElement();
+      printf("Consumer (%d): Job id %d executing sleep duration %d\n", *((int*)cnumber), job_id, job_consumed);
+      sem_signal(semID, MUTEX);
 
-    sem_signal(semID, EMPTY);
-    n++;
+      // sleep for time it takes to process the job
+      sleep(job_consumed);
+
+      sem_signal(semID, EMPTY);
+      n++;
+  }
   }
   
 
