@@ -1,4 +1,4 @@
-/******************************************************************
+/*******************************************************************************
  * The helper file that contains the following helper functions:
  * check_arg - Checks if command line input is a number and returns it
  * sem_create - Create number of sempahores required in a semaphore array
@@ -6,11 +6,9 @@
  * sem_wait - Waits on a semaphore (akin to down ()) in the semaphore array
  * sem_signal - Signals a semaphore (akin to up ()) in the semaphore array
  * sem_close - Destroy the semaphore array
- ******************************************************************/
+ ******************************************************************************/
 
 #include "helper.h"
-#include <time.h>
-#include <stdio.h>
 
 int check_arg (char *buffer)
 {
@@ -67,10 +65,10 @@ int sem_close (int id)
   return 0;
 }
 
-int sem_timed_wait(int id, short unsigned int num,struct timespec *timeout){
+int sem_timed_wait(int id, short unsigned int num, struct timespec *timeout){
   struct sembuf op[] = {
     {num, -1, SEM_UNDO}
   };
-
-  return semtimedop(id,op,1,timeout);
+  // returns 0 if successful and -1 if unsuccessful
+  return semtimedop(id,op,1,timeout); 
 }
