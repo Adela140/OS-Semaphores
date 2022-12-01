@@ -6,12 +6,14 @@
 using namespace std;
 #include "helper.h"
 #include "queue.h"
+#include <chrono>
 
 /* GLOBAL VARIABLES */
 Queue *circQ;
 int n_of_jobs;
 const int MAX_WAIT = 20;
 struct timespec time_s;
+clock_t tStart;
 
 /* SEMAPHORES */
 enum Semaphore{EMPTY, FULL, MUTEX};
@@ -22,9 +24,13 @@ int semID = sem_create(SEM_KEY, semaphores_no);
 void *producer (void *id);
 void *consumer (void *id);
 
+
+
 /******************************** MAIN ********************************/
 
 int main (int argc, char **argv) {
+  
+  auto begin = std::chrono::high_resolution_clock::now();
   
   // check if right number of arguments provided
   if(argc != 5){
@@ -102,14 +108,18 @@ int main (int argc, char **argv) {
   }
   sem_close(semID);
   delete circQ;
-  printf("\nDelete all semaphores using the Unix command 'ipcrm -a'\n");
+
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
+  printf("\nTOTAL TIME TAKEN: %.2fs\n", elapsed.count()*1e-9);
+  printf("Delete all semaphores using the Unix command 'ipcrm -a'\n");
   return 0;
 }
 
 /****************************** PRODUCER ******************************/
 
 void *producer (void *pnumber) {
-
+  
   int wait_return;
   int job_n=0;
 
@@ -126,7 +136,7 @@ void *producer (void *pnumber) {
     if((wait_return==-1)) { 
       if (errno == EAGAIN){ // time limit (20s) expired
         printf("Producer(%d): No slot in queue empty after 20s."
-        " Producer quitting!\n", *((int*)pnumber));
+        " Producer quitting!\n",*((int*)pnumber));
         pthread_exit((void*) 0);
       }
       else{
