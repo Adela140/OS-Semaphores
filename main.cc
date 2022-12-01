@@ -22,6 +22,11 @@ int semID = sem_create(SEM_KEY, semaphores_no);
 void *producer (void *id);
 void *consumer (void *id);
 
+int *queue;
+int queue_size=0;
+int in=0;
+int out=0;
+
 /******************************** MAIN ********************************/
 
 int main (int argc, char **argv) {
@@ -33,7 +38,7 @@ int main (int argc, char **argv) {
   }
 
   // store the command line arguments
-  int queue_size = check_arg(argv[1]);
+  queue_size = check_arg(argv[1]);
   n_of_jobs = check_arg(argv[2]);
   int num_producers = check_arg(argv[3]);
   int num_consumers = check_arg(argv[4]);
@@ -47,6 +52,7 @@ int main (int argc, char **argv) {
 
   // create circular queue (buffer) of size 'queue_size'
   circQ = new Queue(queue_size);
+  queue = new int[queue_size];
 
   // initialise semaphores
   sem_init(semID, MUTEX, 1);
@@ -116,8 +122,7 @@ void *producer (void *pnumber) {
   while(job_n<n_of_jobs){
     // set the number of seconds of the time_s structure to MAX_WAIT (20s)
     time_s.tv_sec=MAX_WAIT;
-    // Produce a job with duration between 1-10 seconds
-    int job_duration = rand()%10 +1;
+    
     // wait if queue is not empty (wait maximum of 20s)
     while((wait_return=sem_timed_wait(semID, EMPTY, &time_s))==-1 && 
            errno == EINTR)
@@ -140,10 +145,19 @@ void *producer (void *pnumber) {
     else{
       sem_wait(semID, MUTEX);
       /*----------- entering the critical section -----------*/
-      // Add the job to the circular queue
-      circQ->addElement(job_duration);
+      // Produce a job with duration between 1-10 seconds
+      int job_duration = rand()%10 +1;
+      int id = in;
+      queue[in]= job_duration;
+      in= (in+1)%queue_size;
       printf("Producer(%d): Job id %d duration %d\n",\
-      *((int*)pnumber), circQ->get_end(), circQ->get_element(circQ->get_end()));
+      *((int*)pnumber), id, job_duration);
+
+
+      // Add the job to the circular queue
+      //circQ->addElement(job_duration);
+      //printf("Producer(%d): Job id %d duration %d\n",\
+      //*((int*)pnumber), circQ->get_end(), circQ->get_element(circQ->get_end()));
       /*----------- leaving the critical section -----------*/
       sem_signal(semID, MUTEX);
       sem_signal(semID, FULL);
@@ -187,16 +201,22 @@ void *consumer (void *cnumber) {
       sem_wait(semID, MUTEX);
       /*----------- entering the critical section -----------*/
       // consume a job 
-      int job_id = circQ->get_start();
-      int job_consumed = circQ->deleteElement();
+      int job = queue[out];
+      int id = out;
+      out = (out+1)%queue_size;
       printf("Consumer(%d): Job id %d executing sleep duration %d\n",\
-      *((int*)cnumber), job_id, job_consumed);
+      *((int*)cnumber), id, job);
+      //int job_id = circQ->get_start();
+      //int job_consumed = circQ->deleteElement();
+      //printf("Consumer(%d): Job id %d executing sleep duration %d\n",\
+      //*((int*)cnumber), job_id, job_consumed);
       /*----------- leaving the critical section -----------*/
       sem_signal(semID, MUTEX);
-      // sleep for time it takes to process the job 
-      sleep(job_consumed);
-      printf("Consumer(%d): Job id %d completed\n", *((int*)cnumber), job_id);
       sem_signal(semID, EMPTY);
+      // sleep for time it takes to process the job 
+      sleep(job);
+      printf("Consumer(%d): Job id %d completed\n", *((int*)cnumber), id);
+      
     }
   }
   pthread_exit((void*) 0);
