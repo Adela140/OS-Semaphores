@@ -3,11 +3,18 @@ using namespace std;
 #include "queue.h"
 
 Queue::Queue(int _size){
-    // initialise both start and end to -1
-    start=-1;
-    end =-1;
-    buffer = new int[_size];
     size=_size;
+    element_count=0;
+    // initialise both start and end to -1
+    start=0;
+    end =0;
+    // create an array of integers
+    buffer = new int[_size];
+    // initialise all positions to -1 to indicate empty position
+    for(int i=0; i<size; i++){
+        buffer[i]=-1;
+    }
+    
 }
 
 Queue::~Queue(){
@@ -16,46 +23,31 @@ Queue::~Queue(){
 
 void Queue::addElement(int num){
     // check if the queue is full 
-    // this can happen if start is at index 0 and end is at i ndex size-1 
-    // OR if the queue has looped around and end is one index before start
-    if((start==0 && end ==size-1)||((end==(start-1)%(size-1)))){
+    if(element_count==size){
         printf("\nCircular queue is full\n");
         return;
     }
-
-    // if empty and inserting first element, change start to 0
-    else{
-    if(start == -1){
-        start = 0;
-    }
-    
-    // increment end and add element
-     end = (end+1)%size;
-     buffer[end] = num;
-    }
-
+    // add element and increment 'end'
+    buffer[end] = num;
+    end = (end+1)%size;
+    element_count++;
 }
 
 int Queue::deleteElement(){
     
     // check if queue is empty
-    if(start==-1){
+    if(element_count==0){
         printf("\n Circular queue is empty\n");
         return -1;
     }
-
+    // retrieve element from start
     int element = buffer[start];
+    // reset position to -1 (to indicate an empty position)
     buffer[start]=-1;
-    // if the queue has one element only, we reset start and end to -1 after
-    // deleting the element 
-    if(start==end){
-        end = -1;
-        start = -1;   
-    }
     // increment the start
-    else{
-        start = (start+1)%size;
-    }
+    start = (start+1)%size;
+    element_count--;
+    
     return element;
 }
 

@@ -1,12 +1,14 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-/* Circular queue */
+/* Circular queue for positive integers
+ * A position contains -1 to indicate empty position */
 class Queue{
     private:
         int start, end;
         int size;
         int *buffer;
+        int element_count;
     public:
         // constructs a Queue containing an array of size '_size'
         // start and end are initialised to -1 by default
