@@ -24,7 +24,6 @@ void *producer (void *id);
 void *consumer (void *id);
 
 
-
 /******************************** MAIN ********************************/
 
 int main (int argc, char **argv) {
@@ -111,8 +110,7 @@ int main (int argc, char **argv) {
   delete circQ;
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
-  printf("\nTOTAL TIME TAKEN: %.2fs\n", elapsed.count()*1e-9);
-  printf("Delete all semaphores using the Unix command 'ipcrm -a'\n");
+  printf("\nTOTAL TIME TAKEN: %.2fs\n\n", elapsed.count()*1e-9);
   return 0;
 }
 
