@@ -124,6 +124,12 @@ void *producer (void *pnumber) {
   int job_n=0;
 
   while(job_n<n_of_jobs){
+    // wait 1-5 seconds before adding a job
+    sleep(rand()%5 +1);
+
+    // Produce a job with duration between 1-10 seconds
+    int job_duration = rand()%10 +1;   
+
     // set the number of seconds of the time_s structure to MAX_WAIT (20s)
     time_s.tv_sec=MAX_WAIT;
     
@@ -149,8 +155,6 @@ void *producer (void *pnumber) {
     else{
       sem_wait(semID, MUTEX);
       /*----------- entering the critical section -----------*/
-      // Produce a job with duration between 1-10 seconds
-      int job_duration = rand()%10 +1;
       // Add the job to the circular queue
       int job_id = circQ->get_end();
       circQ->addElement(job_duration);
@@ -161,8 +165,6 @@ void *producer (void *pnumber) {
       sem_signal(semID, FULL);
       job_n++;
     }
-    // wait 1-5 seconds before adding another job
-    sleep(rand()%5 +1);
   }
   printf("Producer(%d): No more jobs to generate.\n", *((int*)pnumber));
   pthread_exit((void*) 0);
