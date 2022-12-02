@@ -18,8 +18,7 @@ clock_t tStart;
 /* SEMAPHORES */
 enum Semaphore{EMPTY, FULL, MUTEX};
 const int semaphores_no =3;
-// Create semaphores
-int semID = sem_create(SEM_KEY, semaphores_no);
+int semID;
 
 void *producer (void *id);
 void *consumer (void *id);
@@ -54,6 +53,8 @@ int main (int argc, char **argv) {
   // create circular queue (buffer) of size 'queue_size'
   circQ = new Queue(queue_size);
 
+  // Create semaphores
+  semID = sem_create(SEM_KEY, semaphores_no);
   // initialise semaphores
   sem_init(semID, MUTEX, 1);
   sem_init(semID, EMPTY, queue_size);
@@ -108,7 +109,6 @@ int main (int argc, char **argv) {
   }
   sem_close(semID);
   delete circQ;
-
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
   printf("\nTOTAL TIME TAKEN: %.2fs\n", elapsed.count()*1e-9);
