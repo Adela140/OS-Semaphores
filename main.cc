@@ -13,7 +13,6 @@ Queue *circQ;
 int n_of_jobs;
 const int MAX_WAIT = 20;
 struct timespec time_s;
-clock_t tStart;
 
 /* SEMAPHORES */
 enum Semaphore{EMPTY, FULL, MUTEX};
@@ -28,12 +27,12 @@ void *consumer (void *id);
 
 int main (int argc, char **argv) {
   
-  auto begin = std::chrono::high_resolution_clock::now();
+  auto begin = std::chrono::high_resolution_clock::now(); // start clock
   
   // check if right number of arguments provided
   if(argc != 5){
-  cerr << "Number of arguments must be four!" << endl;
-  return 0;
+    cerr << "Number of arguments must be four!" << endl;
+    return 0;
   }
 
   // store the command line arguments
@@ -52,9 +51,8 @@ int main (int argc, char **argv) {
   // create circular queue (buffer) of size 'queue_size'
   circQ = new Queue(queue_size);
 
-  // Create semaphores
+  // Create and initialise semaphores
   semID = sem_create(SEM_KEY, semaphores_no);
-  // initialise semaphores
   sem_init(semID, MUTEX, 1);
   sem_init(semID, EMPTY, queue_size);
   sem_init(semID, FULL, 0);
@@ -64,10 +62,7 @@ int main (int argc, char **argv) {
   int prod_id[num_producers];
   for(int n=0; n<num_producers; n++){
     prod_id[n]=n+1;
-    if((pthread_create(&producerid[n], NULL, producer, (void*)&prod_id[n])==0)){
-      // successful creation of thread
-    }
-    else{
+    if((pthread_create(&producerid[n], NULL, producer, (void*)&prod_id[n])!=0)){
       // unsuccessful creation of thread
       perror("Producer thread creation unsuccessful\n");
     }
@@ -78,10 +73,7 @@ int main (int argc, char **argv) {
   int con_id[num_consumers];
   for(int n=0; n<num_consumers; n++){
     con_id[n]=n+1;
-    if((pthread_create(&consumerid[n], NULL, consumer, (void*)&con_id[n])==0)){
-      // successful creation of thread
-    }
-    else{
+    if((pthread_create(&consumerid[n], NULL, consumer, (void*)&con_id[n])!=0)){
       // unsuccessful creation of thread
       perror("Consumer thread creation unsuccessful\n");
     }
@@ -89,25 +81,22 @@ int main (int argc, char **argv) {
 
   // join producer and consumer threads
   for (int n=0; n<num_producers; n++){
-    if((pthread_join(producerid[n], NULL))==0){
-      // successful join
-    }
-    else{
+    if((pthread_join(producerid[n], NULL))!=0){
       // unsuccessful  join
       perror("Producer thread join unsuccessful\n");
     }
   }
   for (int n=0; n<num_consumers; n++){
-    if((pthread_join(consumerid[n], NULL))==0){
-      // successful join
-    }
-    else{
+    if((pthread_join(consumerid[n], NULL))!=0){
       // unsuccessful  join
       perror("Consumer thread join unsuccessful\n");
     }
   }
+  // clean up 
   sem_close(semID);
   delete circQ;
+
+  // time taken 
   auto end = std::chrono::high_resolution_clock::now();
   auto elapsed=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
   printf("\nTOTAL TIME TAKEN: %.2fs\n\n", elapsed.count()*1e-9);
